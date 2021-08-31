@@ -9,12 +9,15 @@ local function center(str)
 end
 
 local function create_border_table(width, height)
-	local border_lines = { "╔" .. string.rep("═", width) .. "╗" }
-	local middle_line = "║" .. string.rep(" ", width) .. "║"
-	for i = 1, height do
+    if width <= 2 or height <= 2 then
+        return nil, nil
+    end
+	local border_lines = { "╔" .. string.rep("═", width - 2) .. "╗" }
+	local middle_line = "║" .. string.rep(" ", width - 2) .. "║"
+	for i = 2, height - 1 do
 		table.insert(border_lines, middle_line)
 	end
-	table.insert(border_lines, "╚" .. string.rep("═", width) .. "╝")
+	table.insert(border_lines, "╚" .. string.rep("═", width - 2) .. "╝")
 	return border_lines
 end
 
@@ -53,7 +56,7 @@ local function open_window()
 		border_window_col
 	)
 
-	local border_lines = create_border_table(main_window_width, main_window_height)
+	local border_lines = create_border_table(border_window_width, border_window_height)
 	vim.api.nvim_buf_set_lines(border_buf, 0, -1, false, border_lines)
 
 	main_window, main_buffer = create_window_buffer_pair(
