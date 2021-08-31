@@ -9,9 +9,9 @@ local function center(str)
 end
 
 local function create_border_table(width, height)
-    if width <= 2 or height <= 2 then
-        return nil, nil
-    end
+	if width <= 2 or height <= 2 then
+		return nil, nil
+	end
 	local border_lines = { "╔" .. string.rep("═", width - 2) .. "╗" }
 	local middle_line = "║" .. string.rep(" ", width - 2) .. "║"
 	for i = 2, height - 1 do
@@ -71,21 +71,8 @@ local function open_window()
 	vim.api.nvim_win_set_option(main_window, "cursorline", true)
 
 	api.nvim_command('au BufWipeout <buffer> exe "silent bwipeout! "' .. border_buf)
-	api.nvim_buf_set_lines(main_buffer, 0, -1, false, { center("What have i done?"), "", "" })
+	api.nvim_buf_set_lines(main_buffer, 0, -1, false, { center("Git Tree"), center("v0.0.1" .. position), "" })
 	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeHeader", 0, 0, -1)
-end
-
-local function update_view()
-	-- we will use vim systemlist function which run shell
-	-- command and return result as list
-	local result = vim.fn.systemlist("git diff-tree --no-commit-id --name-only -r HEAD")
-
-	-- with small indentation results will look better
-	for k, v in pairs(result) do
-		result[k] = "  " .. result[k]
-	end
-
-	api.nvim_buf_set_lines(main_buffer, 0, -1, false, result)
 end
 
 local function update_view(direction)
@@ -96,14 +83,17 @@ local function update_view(direction)
 		position = 0
 	end
 
-	local result = vim.fn.systemlist("git diff-tree --no-commit-id --name-only -r  HEAD~" .. position)
+	-- local result = vim.fn.systemlist("git diff-tree --no-commit-id --name-only -r  HEAD~" .. position)
+	local result = vim.fn.systemlist(
+		"git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all --tags"
+	)
 	for k, v in pairs(result) do
 		result[k] = "  " .. result[k]
 	end
 
 	api.nvim_buf_set_lines(main_buffer, 0, -1, false, {
-		center("What have i done?"),
-		center("HEAD~" .. position),
+		center("Git Tree"),
+		center("v0.0.1" .. position),
 		"",
 	})
 	api.nvim_buf_set_lines(main_buffer, 3, -1, false, result)
@@ -130,40 +120,6 @@ local function set_mappings()
 			silent = true,
 		})
 	end
-
-	local other_chars = {
-		"a",
-		"b",
-		"c",
-		"d",
-		"e",
-		"f",
-		"g",
-		"i",
-		"n",
-		"o",
-		"p",
-		"r",
-		"s",
-		"t",
-		"u",
-		"v",
-		"w",
-		"x",
-		"y",
-		"z",
-	}
-	for k, v in ipairs(other_chars) do
-		api.nvim_buf_set_keymap(main_buffer, "n", v, "", { nowait = true, noremap = true, silent = true })
-		api.nvim_buf_set_keymap(main_buffer, "n", v:upper(), "", { nowait = true, noremap = true, silent = true })
-		api.nvim_buf_set_keymap(
-			main_buffer,
-			"n",
-			"<c-" .. v .. ">",
-			"",
-			{ nowait = true, noremap = true, silent = true }
-		)
-	end
 end
 
 local function close_window()
@@ -177,11 +133,13 @@ local function move_cursor()
 	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
 end
 
--- Open file under cursor
 local function open_file()
 	local str = api.nvim_get_current_line()
-	close_window()
-	api.nvim_command("edit " .. str)
+	local commit_hash_str = string.sub(str, 5, 12)
+	local result = vim.fn.systemlist("git diff " .. commit_hash_str)
+	api.nvim_buf_set_option(main_buffer, "modifiable", true)
+	api.nvim_buf_set_lines(main_buffer, 0, -1, false, result)
+	api.nvim_buf_set_option(main_buffer, "modifiable", false)
 end
 
 local function git_tree()
