@@ -1,6 +1,5 @@
 local api = vim.api
 local main_buffer, main_window
-local position = 0
 
 local function center(str)
 	local width = api.nvim_win_get_width(0)
@@ -71,19 +70,11 @@ local function open_window()
 	vim.api.nvim_win_set_option(main_window, "cursorline", true)
 
 	api.nvim_command('au BufWipeout <buffer> exe "silent bwipeout! "' .. border_buf)
-	api.nvim_buf_set_lines(main_buffer, 0, -1, false, { center("Git Tree"), center("v0.0.1" .. position), "" })
+	api.nvim_buf_set_lines(main_buffer, 0, -1, false, { center("Git Tree"), center("v0.0.1"), "" })
 	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeHeader", 0, 0, -1)
 end
 
 local function update_view(direction)
-	api.nvim_buf_set_option(main_buffer, "modifiable", true)
-
-	position = position + direction
-	if position < 0 then
-		position = 0
-	end
-
-	-- local result = vim.fn.systemlist("git diff-tree --no-commit-id --name-only -r  HEAD~" .. position)
 	local result = vim.fn.systemlist(
 		"git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all --tags"
 	)
@@ -91,9 +82,10 @@ local function update_view(direction)
 		result[k] = "  " .. result[k]
 	end
 
+	api.nvim_buf_set_option(main_buffer, "modifiable", true)
 	api.nvim_buf_set_lines(main_buffer, 0, -1, false, {
 		center("Git Tree"),
-		center("v0.0.1" .. position),
+		center("v0.0.1"),
 		"",
 	})
 	api.nvim_buf_set_lines(main_buffer, 3, -1, false, result)
@@ -126,8 +118,6 @@ local function close_window()
 	api.nvim_win_close(main_window, true)
 end
 
--- Our file list start at line 4, so we can prevent reaching above it
--- from bottm the end of the buffer will limit movment
 local function move_cursor()
 	local new_pos = math.max(4, api.nvim_win_get_cursor(main_window)[1] - 1)
 	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
@@ -135,15 +125,16 @@ end
 
 local function open_file()
 	local str = api.nvim_get_current_line()
-	local commit_hash_str = string.sub(str, 5, 12)
+	local index_of_star = string.find(str, "*")
+	local commit_hash_str = string.sub(str, index_of_star + 2, index_of_star + 9)
 	local result = vim.fn.systemlist("git diff " .. commit_hash_str)
 	api.nvim_buf_set_option(main_buffer, "modifiable", true)
+	api.nvim_buf_set_option(main_buffer, "filetype", "diff")
 	api.nvim_buf_set_lines(main_buffer, 0, -1, false, result)
 	api.nvim_buf_set_option(main_buffer, "modifiable", false)
 end
 
 local function git_tree()
-	position = 0 -- if you want to preserve last displayed state just omit this line
 	open_window()
 	set_mappings()
 	update_view(0)
