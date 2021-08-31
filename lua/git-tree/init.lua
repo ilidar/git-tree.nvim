@@ -1,5 +1,5 @@
 local api = vim.api
-local buf, win
+local main_buffer, main_window
 local position = 0
 
 local function center(str)
@@ -8,55 +8,68 @@ local function center(str)
 	return string.rep(" ", shift) .. str
 end
 
-local function open_window()
-	buf = vim.api.nvim_create_buf(false, true)
-	local border_buf = vim.api.nvim_create_buf(false, true)
+local function create_border_table(width, height)
+	local border_lines = { "╔" .. string.rep("═", width) .. "╗" }
+	local middle_line = "║" .. string.rep(" ", width) .. "║"
+	for i = 1, height do
+		table.insert(border_lines, middle_line)
+	end
+	table.insert(border_lines, "╚" .. string.rep("═", width) .. "╝")
+	return border_lines
+end
 
-	vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(buf, "filetype", "whid")
-
-	local width = vim.api.nvim_get_option("columns")
-	local height = vim.api.nvim_get_option("lines")
-
-	local win_height = math.ceil(height * 0.8 - 4)
-	local win_width = math.ceil(width * 0.8)
-	local row = math.ceil((height - win_height) / 2 - 1)
-	local col = math.ceil((width - win_width) / 2)
-
-	local border_opts = {
+local function create_window_buffer_pair(width, height, row, col)
+	local border_window_options = {
 		style = "minimal",
 		relative = "editor",
-		width = win_width + 2,
-		height = win_height + 2,
-		row = row - 1,
-		col = col - 1,
-	}
-
-	local opts = {
-		style = "minimal",
-		relative = "editor",
-		width = win_width,
-		height = win_height,
+		width = width,
+		height = height,
 		row = row,
 		col = col,
 	}
+	local border_buf = vim.api.nvim_create_buf(false, true)
+	local border_window = vim.api.nvim_open_win(border_buf, true, border_window_options)
+	return border_window, border_buf
+end
 
-	local border_lines = { "╔" .. string.rep("═", win_width) .. "╗" }
-	local middle_line = "║" .. string.rep(" ", win_width) .. "║"
-	for i = 1, win_height do
-		table.insert(border_lines, middle_line)
-	end
-	table.insert(border_lines, "╚" .. string.rep("═", win_width) .. "╝")
+local function open_window()
+	local width = vim.api.nvim_get_option("columns")
+	local height = vim.api.nvim_get_option("lines")
+
+	local main_window_height = math.ceil(height * 0.8 - 4)
+	local main_window_width = math.ceil(width * 0.8)
+	local main_window_row = math.ceil((height - main_window_height) / 2 - 1)
+	local main_window_col = math.ceil((width - main_window_width) / 2)
+
+	local border_window_height = main_window_height + 2
+	local border_window_width = main_window_width + 2
+	local border_window_row = main_window_row - 1
+	local border_window_col = main_window_col - 1
+
+	local _, border_buf = create_window_buffer_pair(
+		border_window_width,
+		border_window_height,
+		border_window_row,
+		border_window_col
+	)
+
+	local border_lines = create_border_table(main_window_width, main_window_height)
 	vim.api.nvim_buf_set_lines(border_buf, 0, -1, false, border_lines)
 
-	local border_win = vim.api.nvim_open_win(border_buf, true, border_opts)
-	win = api.nvim_open_win(buf, true, opts)
+	main_window, main_buffer = create_window_buffer_pair(
+		main_window_width,
+		main_window_height,
+		main_window_row,
+		main_window_col
+	)
+
+	vim.api.nvim_buf_set_option(main_buffer, "bufhidden", "wipe")
+	vim.api.nvim_buf_set_option(main_buffer, "filetype", "git_tree")
+	vim.api.nvim_win_set_option(main_window, "cursorline", true)
+
 	api.nvim_command('au BufWipeout <buffer> exe "silent bwipeout! "' .. border_buf)
-
-	vim.api.nvim_win_set_option(win, "cursorline", true)
-
-	api.nvim_buf_set_lines(buf, 0, -1, false, { center("What have i done?"), "", "" })
-	api.nvim_buf_add_highlight(buf, -1, "WhidHeader", 0, 0, -1)
+	api.nvim_buf_set_lines(main_buffer, 0, -1, false, { center("What have i done?"), "", "" })
+	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeHeader", 0, 0, -1)
 end
 
 local function update_view()
@@ -69,13 +82,11 @@ local function update_view()
 		result[k] = "  " .. result[k]
 	end
 
-	api.nvim_buf_set_lines(buf, 0, -1, false, result)
+	api.nvim_buf_set_lines(main_buffer, 0, -1, false, result)
 end
 
 local function update_view(direction)
-	-- Is nice to prevent user from editing interface, so
-	-- we should enabled it before updating view and disabled after it.
-	api.nvim_buf_set_option(buf, "modifiable", true)
+	api.nvim_buf_set_option(main_buffer, "modifiable", true)
 
 	position = position + direction
 	if position < 0 then
@@ -87,17 +98,15 @@ local function update_view(direction)
 		result[k] = "  " .. result[k]
 	end
 
-	api.nvim_buf_set_lines(buf, 0, -1, false, {
+	api.nvim_buf_set_lines(main_buffer, 0, -1, false, {
 		center("What have i done?"),
 		center("HEAD~" .. position),
 		"",
 	})
-	api.nvim_buf_set_lines(buf, 3, -1, false, result)
-
-	api.nvim_buf_add_highlight(buf, -1, "WhidHeader", 0, 0, -1)
-	api.nvim_buf_add_highlight(buf, -1, "whidSubHeader", 1, 0, -1)
-
-	api.nvim_buf_set_option(buf, "modifiable", false)
+	api.nvim_buf_set_lines(main_buffer, 3, -1, false, result)
+	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeHeader", 0, 0, -1)
+	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeSubHeader", 1, 0, -1)
+	api.nvim_buf_set_option(main_buffer, "modifiable", false)
 end
 
 local function set_mappings()
@@ -112,7 +121,7 @@ local function set_mappings()
 	}
 
 	for k, v in pairs(mappings) do
-		api.nvim_buf_set_keymap(buf, "n", k, ':lua require"git-tree".' .. v .. "<cr>", {
+		api.nvim_buf_set_keymap(main_buffer, "n", k, ':lua require"git-tree".' .. v .. "<cr>", {
 			nowait = true,
 			noremap = true,
 			silent = true,
@@ -142,21 +151,27 @@ local function set_mappings()
 		"z",
 	}
 	for k, v in ipairs(other_chars) do
-		api.nvim_buf_set_keymap(buf, "n", v, "", { nowait = true, noremap = true, silent = true })
-		api.nvim_buf_set_keymap(buf, "n", v:upper(), "", { nowait = true, noremap = true, silent = true })
-		api.nvim_buf_set_keymap(buf, "n", "<c-" .. v .. ">", "", { nowait = true, noremap = true, silent = true })
+		api.nvim_buf_set_keymap(main_buffer, "n", v, "", { nowait = true, noremap = true, silent = true })
+		api.nvim_buf_set_keymap(main_buffer, "n", v:upper(), "", { nowait = true, noremap = true, silent = true })
+		api.nvim_buf_set_keymap(
+			main_buffer,
+			"n",
+			"<c-" .. v .. ">",
+			"",
+			{ nowait = true, noremap = true, silent = true }
+		)
 	end
 end
 
 local function close_window()
-	api.nvim_win_close(win, true)
+	api.nvim_win_close(main_window, true)
 end
 
 -- Our file list start at line 4, so we can prevent reaching above it
 -- from bottm the end of the buffer will limit movment
 local function move_cursor()
-	local new_pos = math.max(4, api.nvim_win_get_cursor(win)[1] - 1)
-	api.nvim_win_set_cursor(win, { new_pos, 0 })
+	local new_pos = math.max(4, api.nvim_win_get_cursor(main_window)[1] - 1)
+	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
 end
 
 -- Open file under cursor
@@ -171,7 +186,7 @@ local function git_tree()
 	open_window()
 	set_mappings()
 	update_view(0)
-	api.nvim_win_set_cursor(win, { 4, 0 }) -- set cursor on first list entry
+	api.nvim_win_set_cursor(main_window, { 4, 0 }) -- set cursor on first list entry
 end
 
 return {
