@@ -1,40 +1,7 @@
 local api = vim.api
 local main_buffer, main_window
-
+local utils = require("git-tree.utils")
 local git_tree = {}
-
-local function center(str)
-	local width = api.nvim_win_get_width(0)
-	local shift = math.floor(width / 2) - math.floor(string.len(str) / 2)
-	return string.rep(" ", shift) .. str
-end
-
-local function create_border_table(width, height)
-	if width <= 2 or height <= 2 then
-		return nil, nil
-	end
-	local border_lines = { "╔" .. string.rep("═", width - 2) .. "╗" }
-	local middle_line = "║" .. string.rep(" ", width - 2) .. "║"
-	for i = 2, height - 1 do
-		table.insert(border_lines, middle_line)
-	end
-	table.insert(border_lines, "╚" .. string.rep("═", width - 2) .. "╝")
-	return border_lines
-end
-
-local function create_window_buffer_pair(width, height, row, col)
-	local border_window_options = {
-		style = "minimal",
-		relative = "editor",
-		width = width,
-		height = height,
-		row = row,
-		col = col,
-	}
-	local border_buf = vim.api.nvim_create_buf(false, true)
-	local border_window = vim.api.nvim_open_win(border_buf, true, border_window_options)
-	return border_window, border_buf
-end
 
 local function set_mappings()
 	local mappings = {
@@ -42,7 +9,7 @@ local function set_mappings()
 		h = "update_view()",
 		l = "update_view()",
 		q = "close_window()",
-		k = "move_cursor()",
+		k = "move_cursor_up_with_limits()",
 	}
 
 	for k, v in pairs(mappings) do
@@ -68,17 +35,17 @@ function git_tree.open_window()
 	local border_window_row = main_window_row - 1
 	local border_window_col = main_window_col - 1
 
-	local _, border_buf = create_window_buffer_pair(
+	local _, border_buf = utils.create_window_buffer_pair(
 		border_window_width,
 		border_window_height,
 		border_window_row,
 		border_window_col
 	)
 
-	local border_lines = create_border_table(border_window_width, border_window_height)
+	local border_lines = utils.create_border_table(border_window_width, border_window_height)
 	vim.api.nvim_buf_set_lines(border_buf, 0, -1, false, border_lines)
 
-	main_window, main_buffer = create_window_buffer_pair(
+	main_window, main_buffer = utils.create_window_buffer_pair(
 		main_window_width,
 		main_window_height,
 		main_window_row,
@@ -90,11 +57,9 @@ function git_tree.open_window()
 	vim.api.nvim_win_set_option(main_window, "cursorline", true)
 
 	api.nvim_command('au BufWipeout <buffer> exe "silent bwipeout! "' .. border_buf)
-	api.nvim_buf_set_lines(main_buffer, 0, -1, false, { center("Git Tree"), center("v0.0.1"), "" })
-	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeHeader", 0, 0, -1)
 end
 
-function git_tree.update_view()
+function git_tree.refresh_git_log_buffer()
 	local git_log_results = vim.fn.systemlist(
 		"git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all --tags"
 	)
@@ -104,8 +69,8 @@ function git_tree.update_view()
 
 	api.nvim_buf_set_option(main_buffer, "modifiable", true)
 	api.nvim_buf_set_lines(main_buffer, 0, -1, false, {
-		center("Git Tree"),
-		center("v0.0.1"),
+		utils.center_string(api.nvim_win_get_width(0), "Git Tree"),
+		utils.center_string(api.nvim_win_get_width(0), "v0.0.1"),
 		"",
 		"   Local changes",
 	})
@@ -119,7 +84,7 @@ function git_tree.close_window()
 	api.nvim_win_close(main_window, true)
 end
 
-function git_tree.move_cursor()
+function git_tree.move_cursor_up_with_limits()
 	local new_pos = math.max(4, api.nvim_win_get_cursor(main_window)[1] - 1)
 	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
 end
@@ -144,7 +109,7 @@ end
 function git_tree.git_tree()
 	git_tree.open_window()
 	set_mappings()
-	git_tree.update_view(0)
+	git_tree.refresh_git_log_buffer()
 	api.nvim_win_set_cursor(main_window, { 4, 0 }) -- set cursor on first list entry
 end
 
