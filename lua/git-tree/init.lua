@@ -1,6 +1,8 @@
 local api = vim.api
 local main_buffer, main_window
 
+local git_tree = {}
+
 local function center(str)
 	local width = api.nvim_win_get_width(0)
 	local shift = math.floor(width / 2) - math.floor(string.len(str) / 2)
@@ -34,7 +36,27 @@ local function create_window_buffer_pair(width, height, row, col)
 	return border_window, border_buf
 end
 
-local function open_window()
+local function set_mappings()
+	local mappings = {
+		["["] = "update_view(-1)",
+		["]"] = "update_view(1)",
+		["<cr>"] = "open_file()",
+		h = "update_view(-1)",
+		l = "update_view(1)",
+		q = "close_window()",
+		k = "move_cursor()",
+	}
+
+	for k, v in pairs(mappings) do
+		api.nvim_buf_set_keymap(main_buffer, "n", k, ':lua require"git-tree".' .. v .. "<cr>", {
+			nowait = true,
+			noremap = true,
+			silent = true,
+		})
+	end
+end
+
+function git_tree.open_window()
 	local width = vim.api.nvim_get_option("columns")
 	local height = vim.api.nvim_get_option("lines")
 
@@ -74,7 +96,7 @@ local function open_window()
 	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeHeader", 0, 0, -1)
 end
 
-local function update_view(direction)
+function git_tree.update_view(direction)
 	local result = vim.fn.systemlist(
 		"git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all --tags"
 	)
@@ -94,36 +116,16 @@ local function update_view(direction)
 	api.nvim_buf_set_option(main_buffer, "modifiable", false)
 end
 
-local function set_mappings()
-	local mappings = {
-		["["] = "update_view(-1)",
-		["]"] = "update_view(1)",
-		["<cr>"] = "open_file()",
-		h = "update_view(-1)",
-		l = "update_view(1)",
-		q = "close_window()",
-		k = "move_cursor()",
-	}
-
-	for k, v in pairs(mappings) do
-		api.nvim_buf_set_keymap(main_buffer, "n", k, ':lua require"git-tree".' .. v .. "<cr>", {
-			nowait = true,
-			noremap = true,
-			silent = true,
-		})
-	end
-end
-
-local function close_window()
+function git_tree.close_window()
 	api.nvim_win_close(main_window, true)
 end
 
-local function move_cursor()
+function git_tree.move_cursor()
 	local new_pos = math.max(4, api.nvim_win_get_cursor(main_window)[1] - 1)
 	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
 end
 
-local function open_file()
+function git_tree.open_file()
 	local str = api.nvim_get_current_line()
 	local index_of_star = string.find(str, "*")
 	local commit_hash_str = string.sub(str, index_of_star + 2, index_of_star + 8)
@@ -134,17 +136,11 @@ local function open_file()
 	api.nvim_buf_set_option(main_buffer, "modifiable", false)
 end
 
-local function git_tree()
-	open_window()
+function git_tree.git_tree()
+	git_tree.open_window()
 	set_mappings()
-	update_view(0)
+	git_tree.update_view(0)
 	api.nvim_win_set_cursor(main_window, { 4, 0 }) -- set cursor on first list entry
 end
 
-return {
-	git_tree = git_tree,
-	update_view = update_view,
-	open_file = open_file,
-	move_cursor = move_cursor,
-	close_window = close_window,
-}
+return git_tree
