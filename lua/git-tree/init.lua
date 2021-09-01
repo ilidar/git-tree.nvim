@@ -38,11 +38,9 @@ end
 
 local function set_mappings()
 	local mappings = {
-		["["] = "update_view(-1)",
-		["]"] = "update_view(1)",
 		["<cr>"] = "open_file()",
-		h = "update_view(-1)",
-		l = "update_view(1)",
+		h = "update_view()",
+		l = "update_view()",
 		q = "close_window()",
 		k = "move_cursor()",
 	}
@@ -96,12 +94,12 @@ function git_tree.open_window()
 	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeHeader", 0, 0, -1)
 end
 
-function git_tree.update_view(direction)
-	local result = vim.fn.systemlist(
+function git_tree.update_view()
+	local git_log_results = vim.fn.systemlist(
 		"git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all --tags"
 	)
-	for k, v in pairs(result) do
-		result[k] = "  " .. result[k]
+	for k, v in pairs(git_log_results) do
+		git_log_results[k] = " " .. git_log_results[k]
 	end
 
 	api.nvim_buf_set_option(main_buffer, "modifiable", true)
@@ -109,8 +107,9 @@ function git_tree.update_view(direction)
 		center("Git Tree"),
 		center("v0.0.1"),
 		"",
+		"   Local changes",
 	})
-	api.nvim_buf_set_lines(main_buffer, 3, -1, false, result)
+	api.nvim_buf_set_lines(main_buffer, 4, -1, false, git_log_results)
 	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeHeader", 0, 0, -1)
 	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeSubHeader", 1, 0, -1)
 	api.nvim_buf_set_option(main_buffer, "modifiable", false)
@@ -127,12 +126,18 @@ end
 
 function git_tree.open_file()
 	local str = api.nvim_get_current_line()
-	local index_of_star = string.find(str, "*")
-	local commit_hash_str = string.sub(str, index_of_star + 2, index_of_star + 8)
-	local result = vim.fn.systemlist("git diff " .. commit_hash_str .. "~1")
+	local git_diff_results
+	-- TODO: i know it's shit, but lets keep it for now
+	if str == "   Local changes" then
+		git_diff_results = vim.fn.systemlist("git diff")
+	else
+		local index_of_star = string.find(str, "*")
+		local commit_hash_str = string.sub(str, index_of_star + 2, index_of_star + 8)
+		git_diff_results = vim.fn.systemlist("git diff " .. commit_hash_str .. "~1")
+	end
 	api.nvim_buf_set_option(main_buffer, "modifiable", true)
 	api.nvim_buf_set_option(main_buffer, "filetype", "diff")
-	api.nvim_buf_set_lines(main_buffer, 0, -1, false, result)
+	api.nvim_buf_set_lines(main_buffer, 0, -1, false, git_diff_results)
 	api.nvim_buf_set_option(main_buffer, "modifiable", false)
 end
 
