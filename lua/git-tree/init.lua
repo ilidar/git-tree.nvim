@@ -6,8 +6,8 @@ local M = {}
 local function set_mappings()
 	local mappings = {
 		["<cr>"] = "open_file()",
-		h = "update_view()",
-		l = "update_view()",
+		h = "refresh_git_log_buffer()",
+		l = "refresh_git_log_buffer()",
 		q = "close_window()",
 		k = "move_cursor_up_with_limits()",
 	}
