@@ -85,9 +85,6 @@ function M.refresh_git_log_buffer()
 
 	api.nvim_buf_set_option(main_buffer, "modifiable", true)
 	api.nvim_buf_set_lines(main_buffer, 0, -1, false, {
-		utils.center_string(api.nvim_win_get_width(0), "Git Tree"),
-		utils.center_string(api.nvim_win_get_width(0), "v0.0.1"),
-		"",
 		"   Local changes",
 	})
 	api.nvim_buf_set_lines(main_buffer, 4, -1, false, git_log_results)
@@ -97,7 +94,7 @@ function M.refresh_git_log_buffer()
 end
 
 function M.move_cursor_up_with_limits()
-	local new_pos = math.max(4, api.nvim_win_get_cursor(main_window)[1] - 1)
+	local new_pos = math.max(1, api.nvim_win_get_cursor(main_window)[1] - 1)
 	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
 	previous_cursor_position = new_pos
 end
@@ -144,7 +141,7 @@ function M.git_tree()
 	M.open_window()
 	M.set_mappings()
 	M.refresh_git_log_buffer()
-	api.nvim_win_set_cursor(main_window, { 4, 0 }) -- set cursor on first list entry
+	api.nvim_win_set_cursor(main_window, { 1, 0 }) -- set cursor on first list entry
 end
 
 return M
