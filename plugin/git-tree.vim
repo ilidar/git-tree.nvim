@@ -3,8 +3,8 @@ if exists('g:loaded_git_tree') | finish | endif
 let s:save_cpo = &cpo
 set cpo&vim
 
-hi def link GitTreeHeader      Number
-hi def link GitTreeSubHeader   Identifier
+hi def link GitTreeLocalChanges      Number
+hi def link GitTreeCommitHash        Identifier
 
 command! GitTree lua require'git-tree'.git_tree()
 

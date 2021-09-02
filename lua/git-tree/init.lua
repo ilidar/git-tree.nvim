@@ -88,8 +88,13 @@ function M.refresh_git_log_buffer()
 		"   Local changes",
 	})
 	api.nvim_buf_set_lines(main_buffer, 4, -1, false, git_log_results)
-	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeHeader", 0, 0, -1)
-	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeSubHeader", 1, 0, -1)
+	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeLocalChanges", 0, 0, -1)
+	for k, v in pairs(git_log_results) do
+		local commit_hash_from, commit_hash_to = M.get_commit_hash_range(v)
+		if commit_hash_from ~= -1 then
+			api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeCommitHash", k, commit_hash_from, commit_hash_to)
+		end
+	end
 	api.nvim_buf_set_option(main_buffer, "modifiable", false)
 end
 
@@ -100,23 +105,31 @@ function M.move_cursor_up_with_limits()
 end
 
 function M.move_cursor_down_with_limits()
-    local main_buffer_lines_count = api.nvim_buf_line_count(main_buffer)
+	local main_buffer_lines_count = api.nvim_buf_line_count(main_buffer)
 	local new_pos = math.min(main_buffer_lines_count, api.nvim_win_get_cursor(main_window)[1] + 1)
 	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
 	previous_cursor_position = new_pos
 end
 
+function M.get_commit_hash_range(str)
+	local index_of_star = string.find(str, "*")
+	if not index_of_star then
+		return -1, -1
+	end
+	return index_of_star + 1, index_of_star + 8
+end
+
 function M.show_git_diff()
 	local str = api.nvim_get_current_line()
 	local git_diff_results
-	-- TODO: i know it's shit, but lets keep it for now
-	if str == "   Local changes" then
-		git_diff_results = vim.fn.systemlist("git diff")
-	else
-		local index_of_star = string.find(str, "*")
-		local commit_hash_str = string.sub(str, index_of_star + 2, index_of_star + 8)
+	local commit_hash_from, commit_hash_to = M.get_commit_hash_range(str)
+	if commit_hash_from ~= -1 then
+		local commit_hash_str = string.sub(str, commit_hash_from, commit_hash_to)
 		git_diff_results = vim.fn.systemlist("git diff " .. commit_hash_str .. "~1")
+	else
+		git_diff_results = vim.fn.systemlist("git diff")
 	end
+    -- TODO: add check for the last commit
 	api.nvim_buf_set_option(main_buffer, "modifiable", true)
 	api.nvim_buf_set_option(main_buffer, "filetype", "diff")
 	api.nvim_buf_set_lines(main_buffer, 0, -1, false, git_diff_results)
