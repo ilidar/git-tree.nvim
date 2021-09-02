@@ -2,15 +2,16 @@ local api = vim.api
 local main_buffer, main_window
 local border_buffer, border_window
 local utils = require("git-tree.utils")
+local previous_cursor_position = -1
 local M = {}
 
 function M.set_mappings()
 	local mappings = {
-		["<cr>"] = "show_git_diff()",
-		h = "refresh_git_log_buffer()",
-		l = "refresh_git_log_buffer()",
-		q = "close_window()",
+		h = "git_tree_on_diff_exit()",
+		j = "move_cursor_down_with_limits()",
 		k = "move_cursor_up_with_limits()",
+		l = "show_git_diff()",
+		q = "close_window()",
 	}
 
 	for k, v in pairs(mappings) do
@@ -98,6 +99,14 @@ end
 function M.move_cursor_up_with_limits()
 	local new_pos = math.max(4, api.nvim_win_get_cursor(main_window)[1] - 1)
 	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
+	previous_cursor_position = new_pos
+end
+
+function M.move_cursor_down_with_limits()
+    local main_buffer_lines_count = api.nvim_buf_line_count(main_buffer)
+	local new_pos = math.min(main_buffer_lines_count, api.nvim_win_get_cursor(main_window)[1] + 1)
+	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
+	previous_cursor_position = new_pos
 end
 
 function M.show_git_diff()
@@ -124,6 +133,11 @@ function M.git_tree_on_resized()
 		M.refresh_git_log_buffer()
 		M.set_mappings()
 	end
+end
+
+function M.git_tree_on_diff_exit()
+	M.refresh_git_log_buffer()
+	api.nvim_win_set_cursor(main_window, { previous_cursor_position, 0 })
 end
 
 function M.git_tree()
