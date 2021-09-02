@@ -1,11 +1,11 @@
-local utils = {}
+local M = {}
 
-function utils.center_string(width, str)
+function M.center_string(width, str)
 	local shift = math.floor(width / 2) - math.floor(string.len(str) / 2)
 	return string.rep(" ", shift) .. str
 end
 
-function utils.create_border_table(width, height)
+function M.create_border_table(width, height)
 	if width <= 2 or height <= 2 then
 		return nil, nil
 	end
@@ -18,7 +18,7 @@ function utils.create_border_table(width, height)
 	return border_lines
 end
 
-function utils.create_window_buffer_pair(width, height, row, col)
+function M.create_window_buffer_pair(width, height, row, col)
 	local border_window_options = {
 		style = "minimal",
 		relative = "editor",
@@ -32,4 +32,4 @@ function utils.create_window_buffer_pair(width, height, row, col)
 	return border_window, border_buf
 end
 
-return utils
+return M

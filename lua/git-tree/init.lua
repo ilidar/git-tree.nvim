@@ -1,7 +1,7 @@
 local api = vim.api
 local main_buffer, main_window
 local utils = require("git-tree.utils")
-local git_tree = {}
+local M = {}
 
 local function set_mappings()
 	local mappings = {
@@ -21,7 +21,7 @@ local function set_mappings()
 	end
 end
 
-function git_tree.open_window()
+function M.open_window()
 	local width = vim.api.nvim_get_option("columns")
 	local height = vim.api.nvim_get_option("lines")
 
@@ -59,7 +59,7 @@ function git_tree.open_window()
 	api.nvim_command('au BufWipeout <buffer> exe "silent bwipeout! "' .. border_buf)
 end
 
-function git_tree.refresh_git_log_buffer()
+function M.refresh_git_log_buffer()
 	local git_log_results = vim.fn.systemlist(
 		"git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all --tags"
 	)
@@ -80,16 +80,16 @@ function git_tree.refresh_git_log_buffer()
 	api.nvim_buf_set_option(main_buffer, "modifiable", false)
 end
 
-function git_tree.close_window()
+function M.close_window()
 	api.nvim_win_close(main_window, true)
 end
 
-function git_tree.move_cursor_up_with_limits()
+function M.move_cursor_up_with_limits()
 	local new_pos = math.max(4, api.nvim_win_get_cursor(main_window)[1] - 1)
 	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
 end
 
-function git_tree.open_file()
+function M.open_file()
 	local str = api.nvim_get_current_line()
 	local git_diff_results
 	-- TODO: i know it's shit, but lets keep it for now
@@ -106,11 +106,11 @@ function git_tree.open_file()
 	api.nvim_buf_set_option(main_buffer, "modifiable", false)
 end
 
-function git_tree.git_tree()
-	git_tree.open_window()
+function M.git_tree()
+	M.open_window()
 	set_mappings()
-	git_tree.refresh_git_log_buffer()
+	M.refresh_git_log_buffer()
 	api.nvim_win_set_cursor(main_window, { 4, 0 }) -- set cursor on first list entry
 end
 
-return git_tree
+return M
