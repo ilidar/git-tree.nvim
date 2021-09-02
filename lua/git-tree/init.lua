@@ -118,7 +118,7 @@ function M.show_git_diff()
 end
 
 function M.git_tree_on_resized()
-	if vim.api.nvim_win_is_valid(main_window) and vim.api.nvim_win_is_valid(border_window) then
+	if main_window then
 		M.close_window()
 		M.open_window()
 		M.refresh_git_log_buffer()
