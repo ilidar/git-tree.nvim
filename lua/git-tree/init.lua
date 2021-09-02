@@ -4,7 +4,7 @@ local border_buffer, border_window
 local utils = require("git-tree.utils")
 local M = {}
 
-local function set_mappings()
+function M.set_mappings()
 	local mappings = {
 		["<cr>"] = "show_git_diff()",
 		h = "refresh_git_log_buffer()",
@@ -118,14 +118,17 @@ function M.show_git_diff()
 end
 
 function M.git_tree_on_resized()
-	M.close_window()
-	M.open_window()
-	M.refresh_git_log_buffer()
+	if vim.api.nvim_win_is_valid(main_window) and vim.api.nvim_win_is_valid(border_window) then
+		M.close_window()
+		M.open_window()
+		M.refresh_git_log_buffer()
+		M.set_mappings()
+	end
 end
 
 function M.git_tree()
 	M.open_window()
-	set_mappings()
+	M.set_mappings()
 	M.refresh_git_log_buffer()
 	api.nvim_win_set_cursor(main_window, { 4, 0 }) -- set cursor on first list entry
 end
