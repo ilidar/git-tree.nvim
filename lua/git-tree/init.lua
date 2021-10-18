@@ -129,7 +129,6 @@ function M.show_git_diff()
 	else
 		git_diff_results = vim.fn.systemlist("git diff")
 	end
-    -- TODO: add check for the last commit
 	api.nvim_buf_set_option(main_buffer, "modifiable", true)
 	api.nvim_buf_set_option(main_buffer, "filetype", "diff")
 	api.nvim_buf_set_lines(main_buffer, 0, -1, false, git_diff_results)
@@ -155,6 +154,14 @@ function M.git_tree()
 	M.set_mappings()
 	M.refresh_git_log_buffer()
 	api.nvim_win_set_cursor(main_window, { 1, 0 }) -- set cursor on first list entry
+end
+
+function M.git_tree_toggle()
+	if main_window then
+		M.close_window()
+	else
+		M.git_tree()
+	end
 end
 
 return M
