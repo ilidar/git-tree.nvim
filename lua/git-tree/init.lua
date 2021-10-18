@@ -1,11 +1,14 @@
 local api = vim.api
-local main_buffer, main_window
-local border_buffer, border_window
+local log_window_buffer, log_window
+local log_border_window_buffer, log_border_window
+local diff_window_buffer, diff_window
+local diff_border_window, diff_border_window_buffer
 local utils = require("git-tree.utils")
 local previous_cursor_position = -1
 local M = {}
 
 function M.set_mappings()
+    -- TODO: create event functions
 	local mappings = {
 		h = "git_tree_on_diff_exit()",
 		j = "move_cursor_down_with_limits()",
@@ -15,7 +18,7 @@ function M.set_mappings()
 	}
 
 	for k, v in pairs(mappings) do
-		api.nvim_buf_set_keymap(main_buffer, "n", k, ':lua require"git-tree".' .. v .. "<cr>", {
+		api.nvim_buf_set_keymap(log_window_buffer, "n", k, ':lua require"git-tree".' .. v .. "<cr>", {
 			nowait = true,
 			noremap = true,
 			silent = true,
@@ -23,59 +26,106 @@ function M.set_mappings()
 	end
 end
 
+
+-- TODO: refactor
 function M.open_window()
-	assert(main_window == nil, "Main window should not exist")
-	assert(border_window == nil, "Border window should not exist")
+	assert(log_window == nil, "Main window should not exist")
+	assert(log_border_window == nil, "Border window should not exist")
 
 	local width = vim.api.nvim_get_option("columns")
 	local height = vim.api.nvim_get_option("lines")
 
-	local main_window_height = math.ceil(height * 0.8 - 4)
-	local main_window_width = math.ceil(width * 0.8)
-	local main_window_row = math.ceil((height - main_window_height) / 2 - 1)
-	local main_window_col = math.ceil((width - main_window_width) / 2)
+	local h = math.ceil(height * 0.8 - 4)
+	local w = math.ceil(width * 0.8)
+	local r = math.ceil((height - h) / 2 - 1)
+	local c = math.ceil((width - w) / 2)
 
-	local border_window_height = main_window_height + 2
-	local border_window_width = main_window_width + 2
-	local border_window_row = main_window_row - 1
-	local border_window_col = main_window_col - 1
+	local log_window_height = math.floor(h / 2)
+	local log_window_width = w
+	local log_window_row = r
+	local log_window_col = c
 
-	border_window, border_buffer = utils.create_window_buffer_pair(
-		border_window_width,
-		border_window_height,
-		border_window_row,
-		border_window_col
+	local log_border_window_height = math.floor(h / 2) + 2
+	local log_border_window_width = w + 2
+	local log_border_window_row = r - 1
+	local log_border_window_col = c - 1
+
+	local diff_window_height = math.floor(h / 2)
+	local diff_window_width = w
+	local diff_window_row = r + log_window_height + 2
+	local diff_window_col = c
+
+	local diff_border_window_height = math.floor(h / 2) + 2
+	local diff_border_window_width = w + 2
+	local diff_border_window_row = r + log_window_height + 2 - 1
+	local diff_border_window_col = c - 1
+
+	log_border_window, log_border_window_buffer = utils.create_window_buffer_pair(
+		log_border_window_width,
+		log_border_window_height,
+		log_border_window_row,
+		log_border_window_col
 	)
 
-	local border_lines = utils.create_border_table(border_window_width, border_window_height)
-	vim.api.nvim_buf_set_lines(border_buffer, 0, -1, false, border_lines)
-
-	main_window, main_buffer = utils.create_window_buffer_pair(
-		main_window_width,
-		main_window_height,
-		main_window_row,
-		main_window_col
+	diff_border_window, diff_border_window_buffer = utils.create_window_buffer_pair(
+		diff_border_window_width,
+		diff_border_window_height,
+		diff_border_window_row,
+		diff_border_window_col
 	)
 
-	vim.api.nvim_buf_set_option(main_buffer, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(main_buffer, "filetype", "git_tree")
-	vim.api.nvim_buf_set_option(main_buffer, "swapfile", false)
-	vim.api.nvim_buf_set_option(border_buffer, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(border_buffer, "filetype", "git_tree")
-	vim.api.nvim_buf_set_option(border_buffer, "swapfile", false)
+	log_window, log_window_buffer = utils.create_window_buffer_pair(
+		log_window_width,
+		log_window_height,
+		log_window_row,
+		log_window_col
+	)
+    
+	diff_window, diff_window_buffer = utils.create_window_buffer_pair(
+		diff_window_width,
+		diff_window_height,
+		diff_window_row,
+		diff_window_col
+	)
 
-	vim.api.nvim_win_set_option(main_window, "cursorline", true)
+	local border_lines = utils.create_border_table(log_border_window_width, log_border_window_height)
+	vim.api.nvim_buf_set_lines(log_border_window_buffer, 0, -1, false, border_lines)
+
+	local dummy = utils.create_border_table_filled(diff_border_window_width, diff_border_window_height)
+	vim.api.nvim_buf_set_lines(diff_border_window_buffer, 0, -1, false, dummy)
+
+	vim.api.nvim_buf_set_option(log_window_buffer, "bufhidden", "wipe")
+	vim.api.nvim_buf_set_option(log_window_buffer, "filetype", "git_tree")
+	vim.api.nvim_buf_set_option(log_window_buffer, "swapfile", false)
+
+	vim.api.nvim_buf_set_option(log_border_window_buffer, "bufhidden", "wipe")
+	vim.api.nvim_buf_set_option(log_border_window_buffer, "filetype", "git_tree")
+	vim.api.nvim_buf_set_option(log_border_window_buffer, "swapfile", false)
+
+	vim.api.nvim_buf_set_option(diff_window_buffer, "bufhidden", "wipe")
+	vim.api.nvim_buf_set_option(diff_window_buffer, "filetype", "git_tree")
+	vim.api.nvim_buf_set_option(diff_window_buffer, "swapfile", false)
+
+	vim.api.nvim_buf_set_option(diff_border_window_buffer, "bufhidden", "wipe")
+	vim.api.nvim_buf_set_option(diff_border_window_buffer, "filetype", "git_tree")
+	vim.api.nvim_buf_set_option(diff_border_window_buffer, "swapfile", false)
+
+	vim.api.nvim_win_set_option(log_window, "cursorline", true)
 end
 
 function M.close_window()
-	api.nvim_win_close(main_window, true)
-	api.nvim_win_close(border_window, true)
+	api.nvim_win_close(log_window, true)
+	api.nvim_win_close(log_border_window, true)
+	api.nvim_win_close(diff_window, true)
+	api.nvim_win_close(diff_border_window, true)
 
-	main_window = nil
-	border_window = nil
+	log_window = nil
+	log_border_window = nil
+	diff_window = nil
+	diff_border_window = nil
 end
 
-function M.refresh_git_log_buffer()
+function M.refresh_git_log(buffer)
 	local git_log_results = vim.fn.systemlist(
 		"git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all --tags"
 	)
@@ -83,32 +133,36 @@ function M.refresh_git_log_buffer()
 		git_log_results[k] = " " .. git_log_results[k]
 	end
 
-	api.nvim_buf_set_option(main_buffer, "modifiable", true)
-	api.nvim_buf_set_lines(main_buffer, 0, -1, false, {
+	api.nvim_buf_set_option(buffer, "modifiable", true)
+	api.nvim_buf_set_lines(buffer, 0, -1, false, {
 		"   Local changes",
 	})
-	api.nvim_buf_set_lines(main_buffer, 4, -1, false, git_log_results)
-	api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeLocalChanges", 0, 0, -1)
+	api.nvim_buf_set_lines(buffer, 4, -1, false, git_log_results)
+	api.nvim_buf_add_highlight(buffer, -1, "GitTreeLocalChanges", 0, 0, -1)
 	for k, v in pairs(git_log_results) do
 		local commit_hash_from, commit_hash_to = M.get_commit_hash_range(v)
 		if commit_hash_from ~= -1 then
-			api.nvim_buf_add_highlight(main_buffer, -1, "GitTreeCommitHash", k, commit_hash_from, commit_hash_to)
+			api.nvim_buf_add_highlight(buffer, -1, "GitTreeCommitHash", k, commit_hash_from, commit_hash_to)
 		end
 	end
-	api.nvim_buf_set_option(main_buffer, "modifiable", false)
+	api.nvim_buf_set_option(buffer, "modifiable", false)
 end
 
 function M.move_cursor_up_with_limits()
-	local new_pos = math.max(1, api.nvim_win_get_cursor(main_window)[1] - 1)
-	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
+	local new_pos = math.max(1, api.nvim_win_get_cursor(log_window)[1] - 1)
+	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
 	previous_cursor_position = new_pos
+
+	M.show_git_diff_inline()
 end
 
 function M.move_cursor_down_with_limits()
-	local main_buffer_lines_count = api.nvim_buf_line_count(main_buffer)
-	local new_pos = math.min(main_buffer_lines_count, api.nvim_win_get_cursor(main_window)[1] + 1)
-	api.nvim_win_set_cursor(main_window, { new_pos, 0 })
+	local main_buffer_lines_count = api.nvim_buf_line_count(log_window_buffer)
+	local new_pos = math.min(main_buffer_lines_count, api.nvim_win_get_cursor(log_window)[1] + 1)
+	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
 	previous_cursor_position = new_pos
+
+	M.show_git_diff_inline()
 end
 
 function M.get_commit_hash_range(str)
@@ -129,35 +183,51 @@ function M.show_git_diff()
 	else
 		git_diff_results = vim.fn.systemlist("git diff")
 	end
-	api.nvim_buf_set_option(main_buffer, "modifiable", true)
-	api.nvim_buf_set_option(main_buffer, "filetype", "diff")
-	api.nvim_buf_set_lines(main_buffer, 0, -1, false, git_diff_results)
-	api.nvim_buf_set_option(main_buffer, "modifiable", false)
+	api.nvim_buf_set_option(log_window_buffer, "modifiable", true)
+	api.nvim_buf_set_option(log_window_buffer, "filetype", "diff")
+	api.nvim_buf_set_lines(log_window_buffer, 0, -1, false, git_diff_results)
+	api.nvim_buf_set_option(log_window_buffer, "modifiable", false)
+end
+
+function M.show_git_diff_inline()
+	local str = api.nvim_get_current_line()
+	local git_diff_results
+	local commit_hash_from, commit_hash_to = M.get_commit_hash_range(str)
+	if commit_hash_from ~= -1 then
+		local commit_hash_str = string.sub(str, commit_hash_from, commit_hash_to)
+		git_diff_results = vim.fn.systemlist("git diff " .. commit_hash_str .. "~1")
+	else
+		git_diff_results = vim.fn.systemlist("git diff")
+	end
+	api.nvim_buf_set_option(diff_window_buffer, "modifiable", true)
+	api.nvim_buf_set_option(diff_window_buffer, "filetype", "diff")
+	api.nvim_buf_set_lines(diff_window_buffer, 0, -1, false, git_diff_results)
+	api.nvim_buf_set_option(diff_window_buffer, "modifiable", false)
 end
 
 function M.git_tree_on_resized()
-	if main_window then
+	if log_window then
 		M.close_window()
 		M.open_window()
-		M.refresh_git_log_buffer()
+		M.refresh_git_log(log_window_buffer)
 		M.set_mappings()
 	end
 end
 
 function M.git_tree_on_diff_exit()
-	M.refresh_git_log_buffer()
-	api.nvim_win_set_cursor(main_window, { previous_cursor_position, 0 })
+	M.refresh_git_log(log_window_buffer)
+	api.nvim_win_set_cursor(log_window, { previous_cursor_position, 0 })
 end
 
 function M.git_tree()
 	M.open_window()
 	M.set_mappings()
-	M.refresh_git_log_buffer()
-	api.nvim_win_set_cursor(main_window, { 1, 0 }) -- set cursor on first list entry
+	M.refresh_git_log(log_window_buffer)
+	api.nvim_win_set_cursor(log_window, { 1, 0 }) -- set cursor on first list entry
 end
 
 function M.git_tree_toggle()
-	if main_window then
+	if log_window then
 		M.close_window()
 	else
 		M.git_tree()
