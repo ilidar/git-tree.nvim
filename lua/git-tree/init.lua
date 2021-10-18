@@ -5,6 +5,8 @@ local utils = require("git-tree.utils")
 local previous_cursor_position = -1
 local M = {}
 
+-- TODO: move Git function to helper class
+
 function M.set_mappings()
 	-- TODO: create event functions
 	local mappings = {
@@ -107,7 +109,7 @@ function M.move_cursor_up_with_limits()
 	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
 	previous_cursor_position = new_pos
 
-	M.show_git_diff_inline()
+	M.show_git_diff_in_buffer(diff_window_buffer)
 end
 
 function M.move_cursor_down_with_limits()
@@ -116,7 +118,7 @@ function M.move_cursor_down_with_limits()
 	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
 	previous_cursor_position = new_pos
 
-	M.show_git_diff_inline()
+	M.show_git_diff_in_buffer(diff_window_buffer)
 end
 
 function M.get_commit_hash_range(str)
@@ -143,7 +145,7 @@ function M.show_git_diff()
 	api.nvim_buf_set_option(log_window_buffer, "modifiable", false)
 end
 
-function M.show_git_diff_inline()
+function M.show_git_diff_in_buffer(buf)
 	local str = api.nvim_get_current_line()
 	local git_diff_results
 	local commit_hash_from, commit_hash_to = M.get_commit_hash_range(str)
@@ -153,10 +155,10 @@ function M.show_git_diff_inline()
 	else
 		git_diff_results = vim.fn.systemlist("git diff")
 	end
-	api.nvim_buf_set_option(diff_window_buffer, "modifiable", true)
-	api.nvim_buf_set_option(diff_window_buffer, "filetype", "diff")
-	api.nvim_buf_set_lines(diff_window_buffer, 0, -1, false, git_diff_results)
-	api.nvim_buf_set_option(diff_window_buffer, "modifiable", false)
+	api.nvim_buf_set_option(buf, "modifiable", true)
+	api.nvim_buf_set_option(buf, "filetype", "diff")
+	api.nvim_buf_set_lines(buf, 0, -1, false, git_diff_results)
+	api.nvim_buf_set_option(buf, "modifiable", false)
 end
 
 function M.git_tree_on_resized()
@@ -164,6 +166,7 @@ function M.git_tree_on_resized()
 		M.close_window()
 		M.open_window()
 		M.refresh_git_log(log_window_buffer)
+		M.show_git_diff_in_buffer(diff_window_buffer)
 		M.set_mappings()
 	end
 end
