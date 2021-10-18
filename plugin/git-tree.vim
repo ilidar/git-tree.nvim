@@ -17,5 +17,5 @@ let g:loaded_git_tree = 1
 
 augroup GitTree
     autocmd!
-    autocmd VimResized * :lua require("git-tree").git_tree_on_resized()
+    autocmd VimResized * :lua require("git-tree").git_tree_on_resize()
 augroup END

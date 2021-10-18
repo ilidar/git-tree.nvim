@@ -11,10 +11,10 @@ function M.set_mappings()
 	-- TODO: create event functions
 	local mappings = {
 		h = "git_tree_on_diff_exit()",
-		j = "move_cursor_down_with_limits()",
-		k = "move_cursor_up_with_limits()",
-		l = "show_git_diff()",
-		q = "close_window()",
+		j = "git_tree_on_move_cursor_down()",
+		k = "git_tree_on_move_cursor_up()",
+		l = "git_tree_on_show_diff()",
+		q = "git_tree_on_exit()",
 	}
 
 	for k, v in pairs(mappings) do
@@ -81,7 +81,7 @@ function M.close_window()
 	diff_window = nil
 end
 
-function M.refresh_git_log(buffer)
+function M.show_git_log_in_buffer(buffer)
 	local git_log_results = vim.fn.systemlist(
 		"git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all --tags"
 	)
@@ -104,47 +104,6 @@ function M.refresh_git_log(buffer)
 	api.nvim_buf_set_option(buffer, "modifiable", false)
 end
 
-function M.move_cursor_up_with_limits()
-	local new_pos = math.max(1, api.nvim_win_get_cursor(log_window)[1] - 1)
-	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
-	previous_cursor_position = new_pos
-
-	M.show_git_diff_in_buffer(diff_window_buffer)
-end
-
-function M.move_cursor_down_with_limits()
-	local main_buffer_lines_count = api.nvim_buf_line_count(log_window_buffer)
-	local new_pos = math.min(main_buffer_lines_count, api.nvim_win_get_cursor(log_window)[1] + 1)
-	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
-	previous_cursor_position = new_pos
-
-	M.show_git_diff_in_buffer(diff_window_buffer)
-end
-
-function M.get_commit_hash_range(str)
-	local index_of_star = string.find(str, "*")
-	if not index_of_star then
-		return -1, -1
-	end
-	return index_of_star + 1, index_of_star + 8
-end
-
-function M.show_git_diff()
-	local str = api.nvim_get_current_line()
-	local git_diff_results
-	local commit_hash_from, commit_hash_to = M.get_commit_hash_range(str)
-	if commit_hash_from ~= -1 then
-		local commit_hash_str = string.sub(str, commit_hash_from, commit_hash_to)
-		git_diff_results = vim.fn.systemlist("git diff " .. commit_hash_str .. "~1")
-	else
-		git_diff_results = vim.fn.systemlist("git diff")
-	end
-	api.nvim_buf_set_option(log_window_buffer, "modifiable", true)
-	api.nvim_buf_set_option(log_window_buffer, "filetype", "diff")
-	api.nvim_buf_set_lines(log_window_buffer, 0, -1, false, git_diff_results)
-	api.nvim_buf_set_option(log_window_buffer, "modifiable", false)
-end
-
 function M.show_git_diff_in_buffer(buf)
 	local str = api.nvim_get_current_line()
 	local git_diff_results
@@ -161,25 +120,58 @@ function M.show_git_diff_in_buffer(buf)
 	api.nvim_buf_set_option(buf, "modifiable", false)
 end
 
-function M.git_tree_on_resized()
+function M.git_tree_on_move_cursor_up()
+	local new_pos = math.max(1, api.nvim_win_get_cursor(log_window)[1] - 1)
+	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
+	previous_cursor_position = new_pos
+
+	M.show_git_diff_in_buffer(diff_window_buffer)
+end
+
+function M.git_tree_on_move_cursor_down()
+	local main_buffer_lines_count = api.nvim_buf_line_count(log_window_buffer)
+	local new_pos = math.min(main_buffer_lines_count, api.nvim_win_get_cursor(log_window)[1] + 1)
+	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
+	previous_cursor_position = new_pos
+
+	M.show_git_diff_in_buffer(diff_window_buffer)
+end
+
+function M.get_commit_hash_range(str)
+	local index_of_star = string.find(str, "*")
+	if not index_of_star then
+		return -1, -1
+	end
+	return index_of_star + 1, index_of_star + 8
+end
+
+function M.git_tree_on_show_diff()
+	M.show_git_diff_in_buffer(log_window_buffer)
+end
+
+function M.git_tree_on_resize()
 	if log_window then
 		M.close_window()
 		M.open_window()
-		M.refresh_git_log(log_window_buffer)
+		M.show_git_log_in_buffer(log_window_buffer)
 		M.show_git_diff_in_buffer(diff_window_buffer)
 		M.set_mappings()
 	end
 end
 
 function M.git_tree_on_diff_exit()
-	M.refresh_git_log(log_window_buffer)
+	M.show_git_log_in_buffer(log_window_buffer)
 	api.nvim_win_set_cursor(log_window, { previous_cursor_position, 0 })
+end
+
+function M.git_tree_on_exit()
+	M.close_window()
 end
 
 function M.git_tree()
 	M.open_window()
 	M.set_mappings()
-	M.refresh_git_log(log_window_buffer)
+	M.show_git_log_in_buffer(log_window_buffer)
 	api.nvim_win_set_cursor(log_window, { 1, 0 }) -- set cursor on first list entry
 end
 

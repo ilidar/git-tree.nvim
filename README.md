@@ -9,3 +9,4 @@ Git tree plugin to easy visualize git diffs.
 - [ ] Fix coloring for windows ( should be transparent );
 - [ ] Add hash/branches/tags highlighting;
 - [ ] Add ability to move between windows;
+- [ ] Show diff by file;
