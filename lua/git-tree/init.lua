@@ -183,4 +183,9 @@ function M.git_tree_toggle()
 	end
 end
 
+-- TODO: use config functions
+function M.setup(config)
+    print(config)
+end
+
 return M
