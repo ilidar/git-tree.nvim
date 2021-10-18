@@ -1,14 +1,12 @@
 local api = vim.api
 local log_window_buffer, log_window
-local log_border_window_buffer, log_border_window
 local diff_window_buffer, diff_window
-local diff_border_window, diff_border_window_buffer
 local utils = require("git-tree.utils")
 local previous_cursor_position = -1
 local M = {}
 
 function M.set_mappings()
-    -- TODO: create event functions
+	-- TODO: create event functions
 	local mappings = {
 		h = "git_tree_on_diff_exit()",
 		j = "move_cursor_down_with_limits()",
@@ -26,11 +24,9 @@ function M.set_mappings()
 	end
 end
 
-
 -- TODO: refactor
 function M.open_window()
 	assert(log_window == nil, "Main window should not exist")
-	assert(log_border_window == nil, "Border window should not exist")
 
 	local width = vim.api.nvim_get_option("columns")
 	local height = vim.api.nvim_get_option("lines")
@@ -45,33 +41,16 @@ function M.open_window()
 	local log_window_row = r
 	local log_window_col = c
 
-	local log_border_window_height = math.floor(h / 2) + 2
-	local log_border_window_width = w + 2
-	local log_border_window_row = r - 1
-	local log_border_window_col = c - 1
-
 	local diff_window_height = math.floor(h / 2)
 	local diff_window_width = w
 	local diff_window_row = r + log_window_height + 2
 	local diff_window_col = c
 
-	local diff_border_window_height = math.floor(h / 2) + 2
-	local diff_border_window_width = w + 2
-	local diff_border_window_row = r + log_window_height + 2 - 1
-	local diff_border_window_col = c - 1
-
-	log_border_window, log_border_window_buffer = utils.create_window_buffer_pair(
-		log_border_window_width,
-		log_border_window_height,
-		log_border_window_row,
-		log_border_window_col
-	)
-
-	diff_border_window, diff_border_window_buffer = utils.create_window_buffer_pair(
-		diff_border_window_width,
-		diff_border_window_height,
-		diff_border_window_row,
-		diff_border_window_col
+	diff_window, diff_window_buffer = utils.create_window_buffer_pair(
+		diff_window_width,
+		diff_window_height,
+		diff_window_row,
+		diff_window_col
 	)
 
 	log_window, log_window_buffer = utils.create_window_buffer_pair(
@@ -80,49 +59,24 @@ function M.open_window()
 		log_window_row,
 		log_window_col
 	)
-    
-	diff_window, diff_window_buffer = utils.create_window_buffer_pair(
-		diff_window_width,
-		diff_window_height,
-		diff_window_row,
-		diff_window_col
-	)
-
-	local border_lines = utils.create_border_table(log_border_window_width, log_border_window_height)
-	vim.api.nvim_buf_set_lines(log_border_window_buffer, 0, -1, false, border_lines)
-
-	local dummy = utils.create_border_table_filled(diff_border_window_width, diff_border_window_height)
-	vim.api.nvim_buf_set_lines(diff_border_window_buffer, 0, -1, false, dummy)
 
 	vim.api.nvim_buf_set_option(log_window_buffer, "bufhidden", "wipe")
 	vim.api.nvim_buf_set_option(log_window_buffer, "filetype", "git_tree")
 	vim.api.nvim_buf_set_option(log_window_buffer, "swapfile", false)
 
-	vim.api.nvim_buf_set_option(log_border_window_buffer, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(log_border_window_buffer, "filetype", "git_tree")
-	vim.api.nvim_buf_set_option(log_border_window_buffer, "swapfile", false)
-
 	vim.api.nvim_buf_set_option(diff_window_buffer, "bufhidden", "wipe")
 	vim.api.nvim_buf_set_option(diff_window_buffer, "filetype", "git_tree")
 	vim.api.nvim_buf_set_option(diff_window_buffer, "swapfile", false)
-
-	vim.api.nvim_buf_set_option(diff_border_window_buffer, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(diff_border_window_buffer, "filetype", "git_tree")
-	vim.api.nvim_buf_set_option(diff_border_window_buffer, "swapfile", false)
 
 	vim.api.nvim_win_set_option(log_window, "cursorline", true)
 end
 
 function M.close_window()
 	api.nvim_win_close(log_window, true)
-	api.nvim_win_close(log_border_window, true)
 	api.nvim_win_close(diff_window, true)
-	api.nvim_win_close(diff_border_window, true)
 
 	log_window = nil
-	log_border_window = nil
 	diff_window = nil
-	diff_border_window = nil
 end
 
 function M.refresh_git_log(buffer)
