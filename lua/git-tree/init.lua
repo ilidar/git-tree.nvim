@@ -84,23 +84,28 @@ function M.close_window()
 end
 
 function M.show_git_log_in_buffer(buffer)
-	local git_log_results = vim.fn.systemlist(
-		"git log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all --tags"
-	)
-	for k, v in pairs(git_log_results) do
-		git_log_results[k] = " " .. git_log_results[k]
-	end
+	local git_log_lines = git.get_log_lines()
 
 	api.nvim_buf_set_option(buffer, "modifiable", true)
 	api.nvim_buf_set_lines(buffer, 0, -1, false, {
 		"   Local changes",
 	})
-	api.nvim_buf_set_lines(buffer, 4, -1, false, git_log_results)
+	api.nvim_buf_set_lines(buffer, 4, -1, false, git_log_lines)
 	api.nvim_buf_add_highlight(buffer, -1, "GitTreeLocalChanges", 0, 0, -1)
-	for k, v in pairs(git_log_results) do
+	for k, v in pairs(git_log_lines) do
 		local commit_hash_from, commit_hash_to = git.get_commit_hash_range(v)
 		if commit_hash_from ~= -1 then
 			api.nvim_buf_add_highlight(buffer, -1, "GitTreeCommitHash", k, commit_hash_from, commit_hash_to)
+		end
+
+		local commit_time_from, commit_time_to = git.get_commit_time_range(v)
+		if commit_time_from ~= -1 then
+			api.nvim_buf_add_highlight(buffer, -1, "GitTreeCommitTime", k, commit_time_from, commit_time_to)
+		end
+
+		local commit_author_from, commit_author_to = git.get_commit_author_range(v)
+		if commit_author_from ~= -1 then
+			api.nvim_buf_add_highlight(buffer, -1, "GitTreeCommitAuthor", k, commit_author_from, commit_author_to)
 		end
 	end
 	api.nvim_buf_set_option(buffer, "modifiable", false)
@@ -179,7 +184,7 @@ end
 
 -- TODO: use config functions
 function M.setup(config)
-    print(config)
+	print(config)
 end
 
 return M

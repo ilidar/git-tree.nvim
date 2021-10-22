@@ -10,3 +10,5 @@ Git tree plugin to easy visualize git diffs.
 - [ ] Add hash/branches/tags highlighting;
 - [ ] Add ability to move between windows;
 - [ ] Show diff by file;
+- [ ] First commit author name doesn't highlights;
+
