@@ -138,11 +138,11 @@ function M.git_tree_on_move_cursor_down()
 end
 
 function M.get_commit_hash_range(str)
-	local index_of_star = string.find(str, "*")
-	if not index_of_star then
+	local idx = string.find(str, "-")
+	if not idx then
 		return -1, -1
 	end
-	return index_of_star + 1, index_of_star + 8
+	return idx - 9, idx - 2
 end
 
 function M.git_tree_on_show_diff()
