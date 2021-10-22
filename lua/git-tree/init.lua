@@ -1,7 +1,9 @@
+local utils = require("git-tree.utils")
+local git = require("git-tree.git")
+
 local api = vim.api
 local log_window_buffer, log_window
 local diff_window_buffer, diff_window
-local utils = require("git-tree.utils")
 local previous_cursor_position = -1
 local M = {}
 
@@ -96,7 +98,7 @@ function M.show_git_log_in_buffer(buffer)
 	api.nvim_buf_set_lines(buffer, 4, -1, false, git_log_results)
 	api.nvim_buf_add_highlight(buffer, -1, "GitTreeLocalChanges", 0, 0, -1)
 	for k, v in pairs(git_log_results) do
-		local commit_hash_from, commit_hash_to = M.get_commit_hash_range(v)
+		local commit_hash_from, commit_hash_to = git.get_commit_hash_range(v)
 		if commit_hash_from ~= -1 then
 			api.nvim_buf_add_highlight(buffer, -1, "GitTreeCommitHash", k, commit_hash_from, commit_hash_to)
 		end
@@ -107,7 +109,7 @@ end
 function M.show_git_diff_in_buffer(buf)
 	local str = api.nvim_get_current_line()
 	local git_diff_results
-	local commit_hash_from, commit_hash_to = M.get_commit_hash_range(str)
+	local commit_hash_from, commit_hash_to = git.get_commit_hash_range(str)
 	if commit_hash_from ~= -1 then
 		local commit_hash_str = string.sub(str, commit_hash_from, commit_hash_to)
 		git_diff_results = vim.fn.systemlist("git diff " .. commit_hash_str .. "~1")
@@ -135,14 +137,6 @@ function M.git_tree_on_move_cursor_down()
 	previous_cursor_position = new_pos
 
 	M.show_git_diff_in_buffer(diff_window_buffer)
-end
-
-function M.get_commit_hash_range(str)
-	local idx = string.find(str, "-")
-	if not idx then
-		return -1, -1
-	end
-	return idx - 9, idx - 2
 end
 
 function M.git_tree_on_show_diff()
