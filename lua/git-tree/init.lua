@@ -117,7 +117,7 @@ function M.show_git_diff_in_buffer(buf)
 	local commit_hash_from, commit_hash_to = git.get_commit_hash_range(str)
 	if commit_hash_from ~= -1 then
 		local commit_hash_str = string.sub(str, commit_hash_from, commit_hash_to)
-		git_diff_results = vim.fn.systemlist("git diff " .. commit_hash_str .. "~1")
+		git_diff_results = vim.fn.systemlist("git diff " .. commit_hash_str .. "^!")
 	else
 		git_diff_results = vim.fn.systemlist("git diff")
 	end
