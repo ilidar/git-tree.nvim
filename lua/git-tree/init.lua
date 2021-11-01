@@ -40,15 +40,15 @@ function M.open_window()
 	local r = math.ceil((height - h) / 2 - 1)
 	local c = math.ceil((width - w) / 2)
 
-	local log_window_height = math.floor(h / 2)
-	local log_window_width = w
+	local log_window_height = h
+	local log_window_width = math.floor(w / 2)
 	local log_window_row = r
 	local log_window_col = c
 
-	local diff_window_height = math.floor(h / 2)
-	local diff_window_width = w
-	local diff_window_row = r + log_window_height + 2
-	local diff_window_col = c
+	local diff_window_height = h
+	local diff_window_width = math.floor(w / 2)
+	local diff_window_row = r
+	local diff_window_col = c + log_window_width + 2
 
 	diff_window, diff_window_buffer = utils.create_window_buffer_pair(
 		diff_window_width,
