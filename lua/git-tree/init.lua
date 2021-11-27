@@ -3,7 +3,6 @@ local git = require("git-tree.git")
 
 local api = vim.api
 local log_window_buffer, log_window
-local diff_window_buffer, diff_window
 local previous_cursor_position = -1
 local M = {}
 
@@ -41,21 +40,9 @@ function M.open_window()
 	local c = math.ceil((width - w) / 2)
 
 	local log_window_height = h
-	local log_window_width = math.floor(w / 2)
+	local log_window_width = w
 	local log_window_row = r
 	local log_window_col = c
-
-	local diff_window_height = h
-	local diff_window_width = math.floor(w / 2)
-	local diff_window_row = r
-	local diff_window_col = c + log_window_width + 2
-
-	diff_window, diff_window_buffer = utils.create_window_buffer_pair(
-		diff_window_width,
-		diff_window_height,
-		diff_window_row,
-		diff_window_col
-	)
 
 	log_window, log_window_buffer = utils.create_window_buffer_pair(
 		log_window_width,
@@ -68,19 +55,13 @@ function M.open_window()
 	vim.api.nvim_buf_set_option(log_window_buffer, "filetype", "git_tree")
 	vim.api.nvim_buf_set_option(log_window_buffer, "swapfile", false)
 
-	vim.api.nvim_buf_set_option(diff_window_buffer, "bufhidden", "wipe")
-	vim.api.nvim_buf_set_option(diff_window_buffer, "filetype", "git_tree")
-	vim.api.nvim_buf_set_option(diff_window_buffer, "swapfile", false)
-
 	vim.api.nvim_win_set_option(log_window, "cursorline", true)
 end
 
 function M.close_window()
 	api.nvim_win_close(log_window, true)
-	api.nvim_win_close(diff_window, true)
 
 	log_window = nil
-	diff_window = nil
 end
 
 function M.show_git_log_in_buffer(buffer)
@@ -131,8 +112,6 @@ function M.git_tree_on_move_cursor_up()
 	local new_pos = math.max(1, api.nvim_win_get_cursor(log_window)[1] - 1)
 	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
 	previous_cursor_position = new_pos
-
-	M.show_git_diff_in_buffer(diff_window_buffer)
 end
 
 function M.git_tree_on_move_cursor_down()
@@ -140,8 +119,6 @@ function M.git_tree_on_move_cursor_down()
 	local new_pos = math.min(main_buffer_lines_count, api.nvim_win_get_cursor(log_window)[1] + 1)
 	api.nvim_win_set_cursor(log_window, { new_pos, 0 })
 	previous_cursor_position = new_pos
-
-	M.show_git_diff_in_buffer(diff_window_buffer)
 end
 
 function M.git_tree_on_show_diff()
@@ -153,7 +130,6 @@ function M.git_tree_on_resize()
 		M.close_window()
 		M.open_window()
 		M.show_git_log_in_buffer(log_window_buffer)
-		M.show_git_diff_in_buffer(diff_window_buffer)
 		M.set_mappings()
 	end
 end
