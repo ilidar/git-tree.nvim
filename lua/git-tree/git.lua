@@ -37,8 +37,11 @@ function M.get_commit_branch_range(str)
         return -1, -1
     end
     local x = string.find(str, "(", b + 1, true)
+    if not x then
+        return -1, -1
+    end
     local y = string.find(str, ")", x + 1, true)
-    if not x or not y then
+    if not y then
         return -1, -1
     end
     return a - 1, b
