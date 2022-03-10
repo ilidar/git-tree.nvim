@@ -7,6 +7,7 @@ hi def link GitTreeLocalChanges Number
 hi def link GitTreeCommitHash Identifier
 hi def link GitTreeCommitTime Constant
 hi def link GitTreeCommitAuthor String
+hi def link GitTreeCommitBranch Special
 
 command! GitTree lua require'git-tree'.git_tree()
 command! GitTreeToggle lua require'git-tree'.git_tree_toggle()
